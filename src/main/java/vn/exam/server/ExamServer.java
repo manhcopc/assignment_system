@@ -6,6 +6,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +14,7 @@ import vn.exam.model.AssignmentResult;
 import vn.exam.model.CanBo;
 import vn.exam.model.PhongThi;
 import vn.exam.service.AssignmentService;
+import vn.exam.util.AppLogger;
 import vn.exam.util.ExcelReader;
 import vn.exam.util.ExcelWriter;
 import vn.exam.util.FileTransferUtil;
@@ -24,35 +26,95 @@ public class ExamServer {
     private static final String PHONG_THI_FILE = "data/PHONGTHI.xlsx";
     private static final String SERVER_OUTPUT_DIR = "output";
 
+    private final AppLogger logger;
+    private volatile boolean running;
+    private ServerSocket serverSocket;
+
+    public ExamServer() {
+        this(new AppLogger() {
+            public void log(String message) {
+                System.out.println(message);
+            }
+        });
+    }
+
+    public ExamServer(AppLogger logger) {
+        this.logger = logger == null ? new AppLogger() {
+            public void log(String message) {
+                System.out.println(message);
+            }
+        } : logger;
+    }
+
     public static void main(String[] args) {
         new ExamServer().start();
     }
 
     public void start() {
-        ServerSocket serverSocket = null;
+        startServer(PORT);
+    }
+
+    public void startServer(int port) {
+        synchronized (this) {
+            if (running) {
+                log("Server đang chạy, không khởi động lại.");
+                return;
+            }
+            running = true;
+        }
+
         try {
             InetAddress bindAddress = InetAddress.getByName(BIND_ADDRESS);
-            serverSocket = new ServerSocket(PORT, 50, bindAddress);
-            System.out.println("Server đang chạy tại " + BIND_ADDRESS + ":" + PORT
+            serverSocket = new ServerSocket(port, 50, bindAddress);
+            log("Server đang chạy tại " + BIND_ADDRESS + ":" + port
                     + ". Các máy trong cùng LAN có thể kết nối bằng IP của máy server.");
-            System.out.println("Nhấn Ctrl+C để dừng server.");
-            while (true) {
-                Socket socket = serverSocket.accept();
-                String clientIp = socket.getInetAddress().getHostAddress();
-                System.out.println("Client kết nối từ IP: " + clientIp);
-                Thread clientThread = new Thread(new ClientHandler(socket), "exam-client-" + clientIp + "-" + System.nanoTime());
-                clientThread.start();
+            log("Nhấn Stop Server hoặc Ctrl+C để dừng server.");
+            while (running) {
+                try {
+                    Socket socket = serverSocket.accept();
+                    String clientIp = socket.getInetAddress().getHostAddress();
+                    log("Client kết nối từ IP: " + clientIp);
+                    Thread clientThread = new Thread(new ClientHandler(socket),
+                            "exam-client-" + clientIp + "-" + System.nanoTime());
+                    clientThread.start();
+                } catch (SocketException e) {
+                    if (running) {
+                        log("Lỗi socket khi chờ client: " + e.getMessage());
+                    }
+                }
             }
         } catch (Exception e) {
-            System.err.println("Không thể khởi động server tại " + BIND_ADDRESS + ":" + PORT + ": " + e.getMessage());
+            if (running) {
+                log("Không thể khởi động server tại " + BIND_ADDRESS + ":" + port + ": " + e.getMessage());
+            }
         } finally {
-            if (serverSocket != null) {
-                try { serverSocket.close(); } catch (Exception ignored) { }
+            closeServerSocket();
+            running = false;
+            log("Server đã dừng.");
+        }
+    }
+
+    public void stopServer() {
+        running = false;
+        closeServerSocket();
+        log("Đã gửi yêu cầu dừng server.");
+    }
+
+    private void closeServerSocket() {
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            try {
+                serverSocket.close();
+            } catch (Exception e) {
+                log("Lỗi khi đóng server socket: " + e.getMessage());
             }
         }
     }
 
-    private static class ClientHandler implements Runnable {
+    private void log(String message) {
+        logger.log(message);
+    }
+
+    private class ClientHandler implements Runnable {
         private Socket socket;
 
         private ClientHandler(Socket socket) {
@@ -75,7 +137,7 @@ public class ExamServer {
                 int soPhongThi = input.readInt();
                 int soCanBoGiamSat = input.readInt();
                 int soCaThi = input.readInt();
-                System.out.println("[" + clientIp + "] Yêu cầu: " + soPhongThi + " phòng thi, "
+                log("[" + clientIp + "] Yêu cầu: " + soPhongThi + " phòng thi, "
                         + soCanBoGiamSat + " cán bộ giám sát mỗi ca, " + soCaThi + " ca thi.");
 
                 ExcelReader reader = new ExcelReader();
@@ -87,24 +149,24 @@ public class ExamServer {
                 outputFile = createOutputFile(clientIp);
                 new ExcelWriter().writeAssignmentResult(result, outputFile.getPath(), soPhongThi, soCanBoGiamSat, soCaThi);
                 new FileTransferUtil().sendFile(output, outputFile);
-                System.out.println("[" + clientIp + "] Đã gửi file kết quả cho client.");
+                log("[" + clientIp + "] Đã gửi file kết quả cho client.");
             } catch (Exception e) {
-                System.err.println("[" + clientIp + "] Lỗi xử lý client: " + e.getMessage());
+                log("[" + clientIp + "] Lỗi xử lý client: " + e.getMessage());
                 if (output != null) {
                     try {
                         new FileTransferUtil().sendError(output, e.getMessage());
                     } catch (Exception sendErrorException) {
-                        System.err.println("[" + clientIp + "] Không thể gửi lỗi về client: " + sendErrorException.getMessage());
+                        log("[" + clientIp + "] Không thể gửi lỗi về client: " + sendErrorException.getMessage());
                     }
                 }
             } finally {
                 if (outputFile != null && outputFile.exists() && !outputFile.delete()) {
-                    System.err.println("[" + clientIp + "] Không thể xóa file tạm: " + outputFile.getPath());
+                    log("[" + clientIp + "] Không thể xóa file tạm: " + outputFile.getPath());
                 }
                 try { if (input != null) input.close(); } catch (Exception ignored) { }
                 try { if (output != null) output.close(); } catch (Exception ignored) { }
                 try { socket.close(); } catch (Exception ignored) { }
-                System.out.println("[" + clientIp + "] Đã đóng kết nối.");
+                log("[" + clientIp + "] Đã đóng kết nối.");
             }
         }
 

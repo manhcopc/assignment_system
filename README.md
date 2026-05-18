@@ -7,7 +7,7 @@
 - Java 8 trở lên
 - Maven
 - Không dùng database
-- Không dùng giao diện Swing, chỉ chạy console
+- Có thể chạy bằng giao diện Swing hoặc console
 
 ## Cấu trúc dữ liệu đầu vào
 
@@ -64,13 +64,28 @@ target/exam_assignment_system-1.0-SNAPSHOT.jar
 
 ## Chạy server trong mạng LAN
 
+### Chạy server bằng giao diện Swing
+
 Mở terminal trên máy dùng làm server tại thư mục project và chạy:
+
+```bash
+mvn exec:java -Dexec.mainClass="vn.exam.ui.ServerFrame"
+```
+
+Trong cửa sổ server:
+
+1. nhập port, mặc định `9999`;
+2. bấm `Start Server`;
+3. xem log kết nối client trong vùng log;
+4. bấm `Stop Server` khi muốn dừng server.
+
+### Chạy server bằng console
 
 ```bash
 mvn exec:java -Dexec.mainClass="vn.exam.server.ExamServer"
 ```
 
-Server sẽ bind `0.0.0.0:9999`, lắng nghe nhiều client trong cùng mạng LAN và in IP của từng client khi có kết nối.
+Server sẽ bind `0.0.0.0:9999`, lắng nghe nhiều client trong cùng mạng LAN, xử lý mỗi client bằng một thread riêng và in IP của từng client khi có kết nối.
 
 Server sẽ đọc dữ liệu từ:
 
@@ -90,7 +105,23 @@ Nếu client không kết nối được, hãy kiểm tra:
 
 ## Chạy client trong mạng LAN
 
+### Chạy client bằng giao diện Swing
+
 Mở terminal trên máy client tại thư mục project và chạy:
+
+```bash
+mvn exec:java -Dexec.mainClass="vn.exam.ui.ClientFrame"
+```
+
+Trong cửa sổ client:
+
+1. nhập IP server, ví dụ `192.168.1.10` hoặc `localhost` nếu chạy cùng máy;
+2. nhập port, mặc định `9999`;
+3. nhập số phòng thi, số cán bộ giám sát mỗi ca và số ca thi;
+4. nhập hoặc chọn đường dẫn file output bằng `JFileChooser`;
+5. bấm `Gửi yêu cầu phân công` và xem tiến trình trong vùng log.
+
+### Chạy client bằng console
 
 ```bash
 mvn exec:java -Dexec.mainClass="vn.exam.client.ExamClient"
