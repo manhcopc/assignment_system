@@ -33,8 +33,9 @@ File có sheet đầu tiên với hàng tiêu đề và các cột:
 
 ## Quy tắc xử lý
 
-- Server chạy tại port `9999`.
-- Client nhập số phòng thi cần sử dụng, số cán bộ giám sát mỗi ca và số ca thi rồi gửi sang server.
+- Server bind tới địa chỉ `0.0.0.0` và chạy tại port `9999`, nên các máy trong cùng mạng LAN có thể kết nối bằng IP của máy server.
+- Server lắng nghe nhiều client và xử lý mỗi client bằng một thread riêng.
+- Client nhập IP server, số phòng thi cần sử dụng, số cán bộ giám sát mỗi ca và số ca thi rồi gửi sang server.
 - Server kiểm tra:
   - số phòng thi nhập vào không lớn hơn số phòng trong `data/PHONGTHI.xlsx`;
   - tổng số cán bộ cần dùng mỗi ca = `số phòng thi * 2 + số cán bộ giám sát mỗi ca`;
@@ -61,22 +62,35 @@ Sau khi build, Maven tạo file jar có đầy đủ dependency tại:
 target/exam_assignment_system-1.0-SNAPSHOT.jar
 ```
 
-## Chạy server
+## Chạy server trong mạng LAN
 
-Mở terminal thứ nhất tại thư mục project và chạy:
+Mở terminal trên máy dùng làm server tại thư mục project và chạy:
 
 ```bash
 mvn exec:java -Dexec.mainClass="vn.exam.server.ExamServer"
 ```
+
+Server sẽ bind `0.0.0.0:9999`, lắng nghe nhiều client trong cùng mạng LAN và in IP của từng client khi có kết nối.
 
 Server sẽ đọc dữ liệu từ:
 
 - `data/CANBOCOITHI.xlsx`
 - `data/PHONGTHI.xlsx`
 
-## Chạy client
+Để các máy client kết nối được, hãy lấy IP LAN của máy server, ví dụ:
 
-Mở terminal thứ hai tại thư mục project và chạy:
+- Windows: chạy `ipconfig` và xem IPv4 Address của card mạng đang dùng.
+- Linux/macOS: chạy `ip addr` hoặc `ifconfig` và xem địa chỉ dạng `192.168.x.x`/`10.x.x.x`.
+
+Nếu client không kết nối được, hãy kiểm tra:
+
+- server đã chạy chưa;
+- hai máy có cùng mạng LAN không;
+- firewall của máy server đã cho phép port `9999` chưa.
+
+## Chạy client trong mạng LAN
+
+Mở terminal trên máy client tại thư mục project và chạy:
 
 ```bash
 mvn exec:java -Dexec.mainClass="vn.exam.client.ExamClient"
@@ -84,9 +98,10 @@ mvn exec:java -Dexec.mainClass="vn.exam.client.ExamClient"
 
 Nhập lần lượt:
 
-1. số phòng thi cần sử dụng;
-2. số cán bộ giám sát mỗi ca;
-3. số ca thi.
+1. IP server, ví dụ `192.168.1.10`;
+2. số phòng thi cần sử dụng;
+3. số cán bộ giám sát mỗi ca;
+4. số ca thi.
 
 Nếu xử lý thành công, client nhận file từ server và lưu tại:
 
@@ -114,4 +129,5 @@ Chương trình hiển thị thông báo lỗi rõ ràng trên console trong cá
 - số phòng thi nhập vào vượt quá dữ liệu trong file;
 - không đủ cán bộ để phân công theo từng ca;
 - dữ liệu đầu vào rỗng;
-- lỗi tạo hoặc truyền file Excel kết quả.
+- lỗi tạo hoặc truyền file Excel kết quả;
+- client nhập sai IP server, server chưa chạy, firewall chặn port `9999`, hoặc hai máy không cùng mạng LAN.
