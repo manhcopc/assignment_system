@@ -135,19 +135,19 @@ public class ExamServer {
                 output = new DataOutputStream(socket.getOutputStream());
 
                 int soPhongThi = input.readInt();
-                int soCanBoGiamSat = input.readInt();
+                int soGiamThi = input.readInt();
                 int soCaThi = input.readInt();
                 log("[" + clientIp + "] Yêu cầu: " + soPhongThi + " phòng thi, "
-                        + soCanBoGiamSat + " cán bộ giám sát mỗi ca, " + soCaThi + " ca thi.");
+                        + soGiamThi + " giám thị, " + soCaThi + " ca thi.");
 
                 ExcelReader reader = new ExcelReader();
                 List<CanBo> canBoList = reader.readCanBo(CAN_BO_FILE);
                 List<PhongThi> phongThiList = reader.readPhongThi(PHONG_THI_FILE);
 
                 AssignmentResult result = new AssignmentService().phanCongNhieuCa(canBoList, phongThiList,
-                        soPhongThi, soCanBoGiamSat, soCaThi);
+                        soPhongThi, soGiamThi, soCaThi);
                 outputFile = createOutputFile(clientIp);
-                new ExcelWriter().writeAssignmentResult(result, outputFile.getPath(), soPhongThi, soCanBoGiamSat, soCaThi);
+                new ExcelWriter().writeAssignmentResult(result, outputFile.getPath(), soPhongThi, soGiamThi, soCaThi);
                 new FileTransferUtil().sendFile(output, outputFile);
                 log("[" + clientIp + "] Đã gửi file kết quả cho client.");
             } catch (Exception e) {

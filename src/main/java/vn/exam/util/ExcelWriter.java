@@ -19,7 +19,7 @@ import vn.exam.service.AssignmentService;
 
 public class ExcelWriter {
     public void writeAssignmentResult(AssignmentResult result, String outputPath,
-                                      int soPhongThi, int soCanBoGiamSat, int soCaThi) throws IOException {
+                                      int soPhongThi, int soGiamThi, int soCaThi) throws IOException {
         File outputFile = new File(outputPath);
         File parent = outputFile.getParentFile();
         if (parent != null && !parent.exists()) {
@@ -31,7 +31,7 @@ public class ExcelWriter {
             CellStyle headerStyle = createHeaderStyle(workbook);
             writePhanCongSheet(workbook, result, headerStyle);
             writeGiamSatSheet(workbook, result, headerStyle);
-            writeThongKeSheet(workbook, result, headerStyle, soPhongThi, soCanBoGiamSat, soCaThi);
+            writeThongKeSheet(workbook, result, headerStyle, soPhongThi, soGiamThi, soCaThi);
 
             FileOutputStream outputStream = new FileOutputStream(outputFile);
             try {
@@ -49,7 +49,8 @@ public class ExcelWriter {
         int soDongPhanCongMoiCa = soCaThi == 0 ? 0 : result.getDanhSachPhanCong().size() / soCaThi;
         int soPhongThi = soDongPhanCongMoiCa / 2;
         int soCanBoGiamSat = soCaThi == 0 ? 0 : result.getDanhSachGiamSat().size() / soCaThi;
-        writeAssignmentResult(result, outputPath, soPhongThi, soCanBoGiamSat, soCaThi);
+        int soGiamThi = soDongPhanCongMoiCa + soCanBoGiamSat;
+        writeAssignmentResult(result, outputPath, soPhongThi, soGiamThi, soCaThi);
     }
 
     private void writePhanCongSheet(Workbook workbook, AssignmentResult result, CellStyle headerStyle) {
@@ -86,16 +87,19 @@ public class ExcelWriter {
     }
 
     private void writeThongKeSheet(Workbook workbook, AssignmentResult result, CellStyle headerStyle,
-                                   int soPhongThi, int soCanBoGiamSat, int soCaThi) {
+                                   int soPhongThi, int soGiamThi, int soCaThi) {
+        int soGiamThiCan = soPhongThi * 2;
+        int soCanBoGiamSat = soGiamThi - soGiamThiCan;
         Sheet sheet = workbook.createSheet("Thống kê");
         createHeader(sheet, headerStyle, new String[] {"Nội dung", "Giá trị"});
         int rowIndex = 1;
         rowIndex = addStatistic(sheet, rowIndex, "Số phòng thi sử dụng", soPhongThi);
-        rowIndex = addStatistic(sheet, rowIndex, "Số cán bộ giám thị mỗi ca", soPhongThi * 2);
+        rowIndex = addStatistic(sheet, rowIndex, "Số giám thị nhập vào", soGiamThi);
+        rowIndex = addStatistic(sheet, rowIndex, "Số giám thị cần mỗi ca", soGiamThiCan);
         rowIndex = addStatistic(sheet, rowIndex, "Số cán bộ giám sát mỗi ca", soCanBoGiamSat);
         rowIndex = addStatistic(sheet, rowIndex, "Số ca thi", soCaThi);
         rowIndex = addStatistic(sheet, rowIndex, "Tổng số dòng phân công giám thị", result.getDanhSachPhanCong().size());
-        addStatistic(sheet, rowIndex, "Tổng số dòng phân công giám sát", result.getDanhSachGiamSat().size());
+        addStatistic(sheet, rowIndex, "Tổng số dòng giám sát", result.getDanhSachGiamSat().size());
         autoSize(sheet, 2);
     }
 

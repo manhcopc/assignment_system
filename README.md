@@ -35,11 +35,11 @@ File có sheet đầu tiên với hàng tiêu đề và các cột:
 
 - Server bind tới địa chỉ `0.0.0.0` và chạy tại port `9999`, nên các máy trong cùng mạng LAN có thể kết nối bằng IP của máy server.
 - Server lắng nghe nhiều client và xử lý mỗi client bằng một thread riêng.
-- Client nhập IP server, số phòng thi cần sử dụng, số cán bộ giám sát mỗi ca và số ca thi rồi gửi sang server.
+- Client nhập IP server, port, số phòng thi cần sử dụng, số giám thị, số ca thi và đường dẫn lưu file; client chỉ gửi 3 số nguyên `soPhongThi`, `soGiamThi`, `soCaThi` sang server.
 - Server kiểm tra:
   - số phòng thi nhập vào không lớn hơn số phòng trong `data/PHONGTHI.xlsx`;
-  - tổng số cán bộ cần dùng mỗi ca = `số phòng thi * 2 + số cán bộ giám sát mỗi ca`;
-  - tổng số cán bộ cần dùng mỗi ca không lớn hơn số cán bộ trong `data/CANBOCOITHI.xlsx`.
+  - số giám thị nhập vào không lớn hơn số cán bộ trong `data/CANBOCOITHI.xlsx`;
+  - số giám thị nhập vào phải >= `số phòng thi * 2`.
 - Mỗi ca, mỗi phòng thi có đúng 2 giám thị:
   - giám thị thứ nhất được đánh `X` ở cột `Giám thị 1`;
   - giám thị thứ hai được đánh `X` ở cột `Giám thị 2`.
@@ -47,7 +47,8 @@ File có sheet đầu tiên với hàng tiêu đề và các cột:
 - Một cán bộ không coi lại phòng đã từng coi ở các ca trước.
 - Hai cán bộ đã từng ghép cặp ở ca trước không được ghép lại ở ca sau.
 - Cán bộ làm giám sát ở ca trước vẫn có thể làm giám thị ở ca sau.
-- Sau khi phân công đủ giám thị cho một ca, các cán bộ chưa dùng trong ca đó được chọn làm giám sát.
+- Server chỉ dùng `soPhongThi` phòng đầu tiên và `soGiamThi` cán bộ đầu tiên trong file.
+- Server tự tính số giám thị cần mỗi ca = `soPhongThi * 2`; cán bộ còn thừa sau khi phân công giám thị sẽ làm giám sát hành lang.
 - Phòng thi được giám sát được chia vòng tròn theo công thức `i % soPhongThi`.
 
 ## Build project
@@ -117,7 +118,7 @@ Trong cửa sổ client:
 
 1. nhập IP server, ví dụ `192.168.1.10` hoặc `localhost` nếu chạy cùng máy;
 2. nhập port, mặc định `9999`;
-3. nhập số phòng thi, số cán bộ giám sát mỗi ca và số ca thi;
+3. nhập số phòng thi, số giám thị và số ca thi;
 4. nhập hoặc chọn đường dẫn file output bằng `JFileChooser`;
 5. bấm `Gửi yêu cầu phân công` và xem tiến trình trong vùng log.
 
@@ -131,8 +132,9 @@ Nhập lần lượt:
 
 1. IP server, ví dụ `192.168.1.10`;
 2. số phòng thi cần sử dụng;
-3. số cán bộ giám sát mỗi ca;
-4. số ca thi.
+3. số giám thị;
+4. số ca thi;
+5. đường dẫn lưu file kết quả (có thể bỏ trống để dùng mặc định).
 
 Nếu xử lý thành công, client nhận file từ server và lưu tại:
 
@@ -150,7 +152,7 @@ File Excel kết quả gồm 3 sheet:
    - `Ca thi`, `STT`, `Mã GV`, `Họ và tên`, `Phòng thi được giám sát`
 3. `Thống kê`
    - `Nội dung`, `Giá trị`
-   - Gồm: số phòng thi sử dụng, số cán bộ giám thị mỗi ca, số cán bộ giám sát mỗi ca, số ca thi, tổng số dòng phân công giám thị, tổng số dòng phân công giám sát.
+   - Gồm: số phòng thi sử dụng, số giám thị nhập vào, số giám thị cần mỗi ca, số cán bộ giám sát mỗi ca, số ca thi, tổng số dòng phân công giám thị, tổng số dòng giám sát.
 
 ## Xử lý lỗi
 
@@ -158,7 +160,7 @@ Chương trình hiển thị thông báo lỗi rõ ràng trên console trong cá
 
 - thiếu file Excel đầu vào;
 - số phòng thi nhập vào vượt quá dữ liệu trong file;
-- không đủ cán bộ để phân công theo từng ca;
+- số giám thị nhỏ hơn `số phòng thi * 2` hoặc lớn hơn số cán bộ trong file;
 - dữ liệu đầu vào rỗng;
 - lỗi tạo hoặc truyền file Excel kết quả;
 - client nhập sai IP server, server chưa chạy, firewall chặn port `9999`, hoặc hai máy không cùng mạng LAN.

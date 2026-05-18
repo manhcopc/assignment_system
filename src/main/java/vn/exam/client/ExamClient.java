@@ -43,19 +43,21 @@ public class ExamClient {
         Scanner scanner = new Scanner(System.in);
         try {
             String serverIp = readServerIp(scanner);
+            int port = readPort(scanner);
             int soPhongThi = readNonNegativeInt(scanner, "Nhập số phòng thi cần sử dụng: ", true);
-            int soCanBoGiamSat = readNonNegativeInt(scanner, "Nhập số cán bộ giám sát mỗi ca: ", false);
+            int soGiamThi = readNonNegativeInt(scanner, "Nhập số giám thị: ", true);
             int soCaThi = readNonNegativeInt(scanner, "Nhập số ca thi: ", true);
+            String outputPath = readOutputPath(scanner);
 
-            sendRequest(serverIp, SERVER_PORT, soPhongThi, soCanBoGiamSat, soCaThi, CLIENT_OUTPUT_FILE);
+            sendRequest(serverIp, port, soPhongThi, soGiamThi, soCaThi, outputPath);
         } catch (Exception e) {
-            logConnectionError(e, SERVER_PORT);
+            // sendRequest logs connection and transfer errors clearly.
         } finally {
             scanner.close();
         }
     }
 
-    public void sendRequest(String host, int port, int soPhongThi, int soCanBoGiamSat,
+    public void sendRequest(String host, int port, int soPhongThi, int soGiamThi,
                             int soCaThi, String outputPath) throws Exception {
         Socket socket = null;
         DataOutputStream output = null;
@@ -69,7 +71,7 @@ public class ExamClient {
 
             log("Đã kết nối server. Đang gửi yêu cầu phân công...");
             output.writeInt(soPhongThi);
-            output.writeInt(soCanBoGiamSat);
+            output.writeInt(soGiamThi);
             output.writeInt(soCaThi);
             output.flush();
 
@@ -113,6 +115,22 @@ public class ExamClient {
             }
             System.out.println("IP server không được để trống. Ví dụ: 192.168.1.10");
         }
+    }
+
+    private int readPort(Scanner scanner) {
+        while (true) {
+            int port = readNonNegativeInt(scanner, "Nhập port server: ", true);
+            if (port <= 65535) {
+                return port;
+            }
+            System.out.println("Port phải nhỏ hơn hoặc bằng 65535.");
+        }
+    }
+
+    private String readOutputPath(Scanner scanner) {
+        System.out.print("Nhập đường dẫn lưu file kết quả (bỏ trống để dùng output/ket_qua_phan_cong.xlsx): ");
+        String value = scanner.nextLine().trim();
+        return value.length() == 0 ? CLIENT_OUTPUT_FILE : value;
     }
 
     private int readNonNegativeInt(Scanner scanner, String message, boolean mustBePositive) {

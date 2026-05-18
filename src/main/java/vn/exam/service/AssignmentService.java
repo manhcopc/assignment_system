@@ -21,12 +21,15 @@ public class AssignmentService {
     private Set<String> capDaGhep;
 
     public AssignmentResult phanCongNhieuCa(List<CanBo> danhSachCanBo, List<PhongThi> danhSachPhong,
-                                            int soPhongThi, int soCanBoGiamSat, int soCaThi) {
-        validateInput(danhSachCanBo, danhSachPhong, soPhongThi, soCanBoGiamSat, soCaThi);
+                                            int soPhongThi, int soGiamThi, int soCaThi) {
+        validateInput(danhSachCanBo, danhSachPhong, soPhongThi, soGiamThi, soCaThi);
 
         phongDaCoi = new HashMap<String, Set<String>>();
         capDaGhep = new HashSet<String>();
         List<PhongThi> phongDuocDung = new ArrayList<PhongThi>(danhSachPhong.subList(0, soPhongThi));
+        List<CanBo> canBoDuocDung = new ArrayList<CanBo>(danhSachCanBo.subList(0, soGiamThi));
+        int soGiamThiCan = soPhongThi * 2;
+        int soCanBoGiamSat = soGiamThi - soGiamThiCan;
         List<PhanCong> danhSachPhanCong = new ArrayList<PhanCong>();
         List<GiamSat> danhSachGiamSat = new ArrayList<GiamSat>();
 
@@ -34,7 +37,7 @@ public class AssignmentService {
             List<RoomAssignment> phanCongCa = new ArrayList<RoomAssignment>();
             Set<String> canBoDaDungTrongCa = new HashSet<String>();
 
-            if (!chonGiamThiChoCa(danhSachCanBo, phongDuocDung, 0, canBoDaDungTrongCa, phanCongCa)) {
+            if (!chonGiamThiChoCa(canBoDuocDung, phongDuocDung, 0, canBoDaDungTrongCa, phanCongCa)) {
                 throw new IllegalArgumentException("Không thể phân công giám thị cho ca " + caThi
                         + " mà vẫn thỏa mãn các ràng buộc phòng đã coi và cặp đã ghép.");
             }
@@ -51,7 +54,7 @@ public class AssignmentService {
             }
 
             int sttGiamSat = 1;
-            for (CanBo canBo : danhSachCanBo) {
+            for (CanBo canBo : canBoDuocDung) {
                 if (sttGiamSat > soCanBoGiamSat) {
                     break;
                 }
@@ -73,8 +76,8 @@ public class AssignmentService {
     }
 
     public AssignmentResult assign(List<CanBo> canBoList, List<PhongThi> phongThiList,
-                                   int soPhongThi, int soCanBoGiamSat) {
-        return phanCongNhieuCa(canBoList, phongThiList, soPhongThi, soCanBoGiamSat, 1);
+                                   int soPhongThi, int soGiamThi) {
+        return phanCongNhieuCa(canBoList, phongThiList, soPhongThi, soGiamThi, 1);
     }
 
     private boolean chonGiamThiChoCa(List<CanBo> danhSachCanBo, List<PhongThi> phongDuocDung,
@@ -147,12 +150,12 @@ public class AssignmentService {
     }
 
     private void validateInput(List<CanBo> canBoList, List<PhongThi> phongThiList,
-                               int soPhongThi, int soCanBoGiamSat, int soCaThi) {
+                               int soPhongThi, int soGiamThi, int soCaThi) {
         if (soPhongThi <= 0) {
             throw new IllegalArgumentException("Số phòng thi cần sử dụng phải lớn hơn 0.");
         }
-        if (soCanBoGiamSat < 0) {
-            throw new IllegalArgumentException("Số cán bộ giám sát mỗi ca không được âm.");
+        if (soGiamThi <= 0) {
+            throw new IllegalArgumentException("Số giám thị phải lớn hơn 0.");
         }
         if (soCaThi <= 0) {
             throw new IllegalArgumentException("Số ca thi phải lớn hơn 0.");
@@ -167,10 +170,14 @@ public class AssignmentService {
             throw new IllegalArgumentException("Số phòng thi nhập vào (" + soPhongThi
                     + ") lớn hơn số phòng trong file (" + phongThiList.size() + ").");
         }
-        int tongCanBoCanDungMoiCa = soPhongThi * 2 + soCanBoGiamSat;
-        if (tongCanBoCanDungMoiCa > canBoList.size()) {
-            throw new IllegalArgumentException("Không đủ cán bộ cho mỗi ca. Cần " + tongCanBoCanDungMoiCa
-                    + " cán bộ nhưng file chỉ có " + canBoList.size() + " cán bộ.");
+        if (soGiamThi > canBoList.size()) {
+            throw new IllegalArgumentException("Số giám thị nhập vào (" + soGiamThi
+                    + ") lớn hơn số cán bộ trong file (" + canBoList.size() + ").");
+        }
+        int soGiamThiCan = soPhongThi * 2;
+        if (soGiamThi < soGiamThiCan) {
+            throw new IllegalArgumentException("Số giám thị nhập vào phải >= số phòng thi * 2. Cần ít nhất "
+                    + soGiamThiCan + " giám thị nhưng chỉ nhập " + soGiamThi + ".");
         }
     }
 

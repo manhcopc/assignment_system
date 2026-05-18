@@ -28,7 +28,7 @@ public class ClientFrame extends JFrame {
     private JTextField hostField;
     private JTextField portField;
     private JTextField soPhongThiField;
-    private JTextField soCanBoGiamSatField;
+    private JTextField soGiamThiField;
     private JTextField soCaThiField;
     private JTextField outputPathField;
     private JButton chooseOutputButton;
@@ -56,7 +56,7 @@ public class ClientFrame extends JFrame {
         hostField = new JTextField("localhost", 25);
         portField = new JTextField(String.valueOf(ExamServer.PORT), 10);
         soPhongThiField = new JTextField(10);
-        soCanBoGiamSatField = new JTextField(10);
+        soGiamThiField = new JTextField(10);
         soCaThiField = new JTextField(10);
         outputPathField = new JTextField("output/ket_qua_phan_cong.xlsx", 35);
         chooseOutputButton = new JButton("Chọn nơi lưu file");
@@ -72,7 +72,7 @@ public class ClientFrame extends JFrame {
         addRow(formPanel, gbc, 0, "IP server:", hostField, null);
         addRow(formPanel, gbc, 1, "Port:", portField, null);
         addRow(formPanel, gbc, 2, "Số phòng thi:", soPhongThiField, null);
-        addRow(formPanel, gbc, 3, "Số cán bộ giám sát mỗi ca:", soCanBoGiamSatField, null);
+        addRow(formPanel, gbc, 3, "Số giám thị:", soGiamThiField, null);
         addRow(formPanel, gbc, 4, "Số ca thi:", soCaThiField, null);
         addRow(formPanel, gbc, 5, "File output:", outputPathField, chooseOutputButton);
 
@@ -137,7 +137,7 @@ public class ClientFrame extends JFrame {
         final String outputPath = outputPathField.getText().trim();
         final int port;
         final int soPhongThi;
-        final int soCanBoGiamSat;
+        final int soGiamThi;
         final int soCaThi;
         try {
             if (host.length() == 0) {
@@ -151,7 +151,7 @@ public class ClientFrame extends JFrame {
                 throw new IllegalArgumentException("Port phải nhỏ hơn hoặc bằng 65535.");
             }
             soPhongThi = parsePositiveInt(soPhongThiField.getText(), "Số phòng thi");
-            soCanBoGiamSat = parseNonNegativeInt(soCanBoGiamSatField.getText(), "Số cán bộ giám sát mỗi ca");
+            soGiamThi = parsePositiveInt(soGiamThiField.getText(), "Số giám thị");
             soCaThi = parsePositiveInt(soCaThiField.getText(), "Số ca thi");
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
@@ -164,7 +164,7 @@ public class ClientFrame extends JFrame {
             public void run() {
                 try {
                     new ExamClient(createSwingLogger()).sendRequest(host, port, soPhongThi,
-                            soCanBoGiamSat, soCaThi, outputPath);
+                            soGiamThi, soCaThi, outputPath);
                 } catch (Exception ignored) {
                     // ExamClient already logs a clear error message.
                 } finally {
