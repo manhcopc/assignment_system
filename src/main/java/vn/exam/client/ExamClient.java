@@ -23,7 +23,8 @@ public class ExamClient {
         DataInputStream input = null;
         try {
             int soPhongThi = readNonNegativeInt(scanner, "Nhập số phòng thi cần sử dụng: ", true);
-            int soCanBoGiamSat = readNonNegativeInt(scanner, "Nhập số cán bộ giám sát: ", false);
+            int soCanBoGiamSat = readNonNegativeInt(scanner, "Nhập số cán bộ giám sát mỗi ca: ", false);
+            int soCaThi = readNonNegativeInt(scanner, "Nhập số ca thi: ", true);
 
             socket = new Socket(SERVER_HOST, ExamServer.PORT);
             output = new DataOutputStream(socket.getOutputStream());
@@ -31,6 +32,7 @@ public class ExamClient {
 
             output.writeInt(soPhongThi);
             output.writeInt(soCanBoGiamSat);
+            output.writeInt(soCaThi);
             output.flush();
 
             new FileTransferUtil().receiveFile(input, CLIENT_OUTPUT_FILE);

@@ -53,14 +53,17 @@ public class ExamServer {
 
             int soPhongThi = input.readInt();
             int soCanBoGiamSat = input.readInt();
-            System.out.println("Yêu cầu: " + soPhongThi + " phòng thi, " + soCanBoGiamSat + " cán bộ giám sát.");
+            int soCaThi = input.readInt();
+            System.out.println("Yêu cầu: " + soPhongThi + " phòng thi, " + soCanBoGiamSat
+                    + " cán bộ giám sát mỗi ca, " + soCaThi + " ca thi.");
 
             ExcelReader reader = new ExcelReader();
             List<CanBo> canBoList = reader.readCanBo(CAN_BO_FILE);
             List<PhongThi> phongThiList = reader.readPhongThi(PHONG_THI_FILE);
 
-            AssignmentResult result = new AssignmentService().assign(canBoList, phongThiList, soPhongThi, soCanBoGiamSat);
-            new ExcelWriter().writeAssignmentResult(result, SERVER_OUTPUT_FILE);
+            AssignmentResult result = new AssignmentService().phanCongNhieuCa(canBoList, phongThiList,
+                    soPhongThi, soCanBoGiamSat, soCaThi);
+            new ExcelWriter().writeAssignmentResult(result, SERVER_OUTPUT_FILE, soPhongThi, soCanBoGiamSat, soCaThi);
             new FileTransferUtil().sendFile(output, new File(SERVER_OUTPUT_FILE));
             System.out.println("Đã gửi file kết quả cho client.");
         } catch (Exception e) {

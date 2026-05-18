@@ -34,15 +34,19 @@ File có sheet đầu tiên với hàng tiêu đề và các cột:
 ## Quy tắc xử lý
 
 - Server chạy tại port `9999`.
-- Client nhập số phòng thi cần sử dụng và số cán bộ giám sát rồi gửi sang server.
+- Client nhập số phòng thi cần sử dụng, số cán bộ giám sát mỗi ca và số ca thi rồi gửi sang server.
 - Server kiểm tra:
   - số phòng thi nhập vào không lớn hơn số phòng trong `data/PHONGTHI.xlsx`;
-  - tổng số cán bộ cần dùng = `số phòng thi * 2 + số cán bộ giám sát`;
-  - tổng số cán bộ cần dùng không lớn hơn số cán bộ trong `data/CANBOCOITHI.xlsx`.
-- Mỗi phòng thi có đúng 2 giám thị:
+  - tổng số cán bộ cần dùng mỗi ca = `số phòng thi * 2 + số cán bộ giám sát mỗi ca`;
+  - tổng số cán bộ cần dùng mỗi ca không lớn hơn số cán bộ trong `data/CANBOCOITHI.xlsx`.
+- Mỗi ca, mỗi phòng thi có đúng 2 giám thị:
   - giám thị thứ nhất được đánh `X` ở cột `Giám thị 1`;
   - giám thị thứ hai được đánh `X` ở cột `Giám thị 2`.
-- Các cán bộ còn lại theo số giám sát nhập vào được đưa sang danh sách giám sát.
+- Một cán bộ không xuất hiện 2 lần trong cùng một ca.
+- Một cán bộ không coi lại phòng đã từng coi ở các ca trước.
+- Hai cán bộ đã từng ghép cặp ở ca trước không được ghép lại ở ca sau.
+- Cán bộ làm giám sát ở ca trước vẫn có thể làm giám thị ở ca sau.
+- Sau khi phân công đủ giám thị cho một ca, các cán bộ chưa dùng trong ca đó được chọn làm giám sát.
 - Phòng thi được giám sát được chia vòng tròn theo công thức `i % soPhongThi`.
 
 ## Build project
@@ -62,7 +66,7 @@ target/exam_assignment_system-1.0-SNAPSHOT.jar
 Mở terminal thứ nhất tại thư mục project và chạy:
 
 ```bash
-java -cp target/exam_assignment_system-1.0-SNAPSHOT.jar vn.exam.server.ExamServer
+mvn exec:java -Dexec.mainClass="vn.exam.server.ExamServer"
 ```
 
 Server sẽ đọc dữ liệu từ:
@@ -75,13 +79,14 @@ Server sẽ đọc dữ liệu từ:
 Mở terminal thứ hai tại thư mục project và chạy:
 
 ```bash
-java -cp target/exam_assignment_system-1.0-SNAPSHOT.jar vn.exam.client.ExamClient
+mvn exec:java -Dexec.mainClass="vn.exam.client.ExamClient"
 ```
 
 Nhập lần lượt:
 
 1. số phòng thi cần sử dụng;
-2. số cán bộ giám sát.
+2. số cán bộ giám sát mỗi ca;
+3. số ca thi.
 
 Nếu xử lý thành công, client nhận file từ server và lưu tại:
 
@@ -94,11 +99,12 @@ output/ket_qua_phan_cong.xlsx
 File Excel kết quả gồm 3 sheet:
 
 1. `Danh sách phân công`
-   - `STT`, `Mã GV`, `Họ và tên`, `Giám thị 1`, `Giám thị 2`, `Phòng thi`
+   - `Ca thi`, `STT`, `Mã GV`, `Họ và tên`, `Giám thị 1`, `Giám thị 2`, `Phòng thi`
 2. `Danh sách giám sát`
-   - `STT`, `Mã GV`, `Họ và tên`, `Phòng thi được giám sát`
+   - `Ca thi`, `STT`, `Mã GV`, `Họ và tên`, `Phòng thi được giám sát`
 3. `Thống kê`
    - `Nội dung`, `Giá trị`
+   - Gồm: số phòng thi sử dụng, số cán bộ giám thị mỗi ca, số cán bộ giám sát mỗi ca, số ca thi, tổng số dòng phân công giám thị, tổng số dòng phân công giám sát.
 
 ## Xử lý lỗi
 
@@ -106,6 +112,6 @@ Chương trình hiển thị thông báo lỗi rõ ràng trên console trong cá
 
 - thiếu file Excel đầu vào;
 - số phòng thi nhập vào vượt quá dữ liệu trong file;
-- không đủ cán bộ để phân công;
+- không đủ cán bộ để phân công theo từng ca;
 - dữ liệu đầu vào rỗng;
 - lỗi tạo hoặc truyền file Excel kết quả.
