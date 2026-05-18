@@ -18,7 +18,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 import vn.exam.client.ExamClient;
 import vn.exam.server.ExamServer;
@@ -58,8 +57,8 @@ public class ClientFrame extends JFrame {
         soPhongThiField = new JTextField(10);
         soGiamThiField = new JTextField(10);
         soCaThiField = new JTextField(10);
-        outputPathField = new JTextField("output/ket_qua_phan_cong.xlsx", 35);
-        chooseOutputButton = new JButton("Chọn nơi lưu file");
+        outputPathField = new JTextField("output", 35);
+        chooseOutputButton = new JButton("Chọn thư mục lưu");
         sendButton = new JButton("Gửi yêu cầu phân công");
         logArea = new JTextArea();
         logArea.setEditable(false);
@@ -74,7 +73,7 @@ public class ClientFrame extends JFrame {
         addRow(formPanel, gbc, 2, "Số phòng thi:", soPhongThiField, null);
         addRow(formPanel, gbc, 3, "Số giám thị:", soGiamThiField, null);
         addRow(formPanel, gbc, 4, "Số ca thi:", soCaThiField, null);
-        addRow(formPanel, gbc, 5, "File output:", outputPathField, chooseOutputButton);
+        addRow(formPanel, gbc, 5, "Thư mục output:", outputPathField, chooseOutputButton);
 
         gbc.gridx = 1;
         gbc.gridy = 6;
@@ -118,17 +117,13 @@ public class ClientFrame extends JFrame {
 
     private void chooseOutputFile() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Chọn nơi lưu file kết quả");
+        fileChooser.setDialogTitle("Chọn thư mục lưu 3 file kết quả");
         fileChooser.setSelectedFile(new File(outputPathField.getText().trim()));
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Excel Workbook (*.xlsx)", "xlsx"));
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         int result = fileChooser.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
-            String path = file.getPath();
-            if (!path.toLowerCase().endsWith(".xlsx")) {
-                path = path + ".xlsx";
-            }
-            outputPathField.setText(path);
+            outputPathField.setText(file.getPath());
         }
     }
 
@@ -144,7 +139,7 @@ public class ClientFrame extends JFrame {
                 throw new IllegalArgumentException("IP server không được để trống.");
             }
             if (outputPath.length() == 0) {
-                throw new IllegalArgumentException("Đường dẫn file output không được để trống.");
+                throw new IllegalArgumentException("Thư mục output không được để trống.");
             }
             port = parsePositiveInt(portField.getText(), "Port");
             if (port > 65535) {

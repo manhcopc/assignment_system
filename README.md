@@ -35,7 +35,7 @@ File có sheet đầu tiên với hàng tiêu đề và các cột:
 
 - Server bind tới địa chỉ `0.0.0.0` và chạy tại port `9999`, nên các máy trong cùng mạng LAN có thể kết nối bằng IP của máy server.
 - Server lắng nghe nhiều client và xử lý mỗi client bằng một thread riêng.
-- Client nhập IP server, port, số phòng thi cần sử dụng, số giám thị, số ca thi và đường dẫn lưu file; client chỉ gửi 3 số nguyên `soPhongThi`, `soGiamThi`, `soCaThi` sang server.
+- Client nhập IP server, port, số phòng thi cần sử dụng, số giám thị, số ca thi và thư mục lưu file; client chỉ gửi 3 số nguyên `soPhongThi`, `soGiamThi`, `soCaThi` sang server.
 - Server kiểm tra:
   - số phòng thi nhập vào không lớn hơn số phòng trong `data/PHONGTHI.xlsx`;
   - số giám thị nhập vào không lớn hơn số cán bộ trong `data/CANBOCOITHI.xlsx`;
@@ -119,7 +119,7 @@ Trong cửa sổ client:
 1. nhập IP server, ví dụ `192.168.1.10` hoặc `localhost` nếu chạy cùng máy;
 2. nhập port, mặc định `9999`;
 3. nhập số phòng thi, số giám thị và số ca thi;
-4. nhập hoặc chọn đường dẫn file output bằng `JFileChooser`;
+4. nhập hoặc chọn thư mục output bằng `JFileChooser`;
 5. bấm `Gửi yêu cầu phân công` và xem tiến trình trong vùng log.
 
 ### Chạy client bằng console
@@ -134,24 +134,26 @@ Nhập lần lượt:
 2. số phòng thi cần sử dụng;
 3. số giám thị;
 4. số ca thi;
-5. đường dẫn lưu file kết quả (có thể bỏ trống để dùng mặc định).
+5. thư mục lưu file kết quả (có thể bỏ trống để dùng mặc định).
 
-Nếu xử lý thành công, client nhận file từ server và lưu tại:
+Nếu xử lý thành công, client nhận 3 file từ server và lưu trong thư mục output đã chọn:
 
 ```text
-output/ket_qua_phan_cong.xlsx
+DANHSACHPHANCONG.XLSX
+DANH SACHGIAMSAT.XLSX
+THONGKE.XLSX
 ```
 
 ## File kết quả
 
-File Excel kết quả gồm 3 sheet:
+Kết quả gồm 3 file Excel, mỗi file chỉ có 1 sheet duy nhất:
 
-1. `Danh sách phân công`
-   - `Ca thi`, `STT`, `Mã GV`, `Họ và tên`, `Giám thị 1`, `Giám thị 2`, `Phòng thi`
-2. `Danh sách giám sát`
-   - `Ca thi`, `STT`, `Mã GV`, `Họ và tên`, `Phòng thi được giám sát`
-3. `Thống kê`
-   - `Nội dung`, `Giá trị`
+1. `DANHSACHPHANCONG.XLSX`
+   - Sheet duy nhất `Danh sách phân công` gồm: `Ca thi`, `STT`, `Mã GV`, `Họ và tên`, `Giám thị 1`, `Giám thị 2`, `Phòng thi`
+2. `DANH SACHGIAMSAT.XLSX`
+   - Sheet duy nhất `Danh sách giám sát` gồm: `Ca thi`, `STT`, `Mã GV`, `Họ và tên`, `Phòng thi được giám sát`
+3. `THONGKE.XLSX`
+   - Sheet duy nhất `Thống kê` gồm: `Nội dung`, `Giá trị`
    - Gồm: số phòng thi sử dụng, số giám thị nhập vào, số giám thị cần mỗi ca, số cán bộ giám sát mỗi ca, số ca thi, tổng số dòng phân công giám thị, tổng số dòng giám sát.
 
 ## Xử lý lỗi
@@ -162,5 +164,5 @@ Chương trình hiển thị thông báo lỗi rõ ràng trên console trong cá
 - số phòng thi nhập vào vượt quá dữ liệu trong file;
 - số giám thị nhỏ hơn `số phòng thi * 2` hoặc lớn hơn số cán bộ trong file;
 - dữ liệu đầu vào rỗng;
-- lỗi tạo hoặc truyền file Excel kết quả;
+- lỗi tạo hoặc truyền 3 file Excel kết quả;
 - client nhập sai IP server, server chưa chạy, firewall chặn port `9999`, hoặc hai máy không cùng mạng LAN.

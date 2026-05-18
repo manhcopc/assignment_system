@@ -128,7 +128,8 @@ public class ExamServer {
         private void handleClient(Socket socket) {
             DataInputStream input = null;
             DataOutputStream output = null;
-            File outputFile = null;
+            File outputDirectory = null;
+            List<File> outputFiles = null;
             String clientIp = socket.getInetAddress().getHostAddress();
             try {
                 input = new DataInputStream(socket.getInputStream());
@@ -146,10 +147,11 @@ public class ExamServer {
 
                 AssignmentResult result = new AssignmentService().phanCongNhieuCa(canBoList, phongThiList,
                         soPhongThi, soGiamThi, soCaThi);
-                outputFile = createOutputFile(clientIp);
-                new ExcelWriter().writeAssignmentResult(result, outputFile.getPath(), soPhongThi, soGiamThi, soCaThi);
-                new FileTransferUtil().sendFile(output, outputFile);
-                log("[" + clientIp + "] Đã gửi file kết quả cho client.");
+                outputDirectory = createOutputDirectory(clientIp);
+                outputFiles = new ExcelWriter().writeAssignmentResultFiles(result, outputDirectory.getPath(),
+                        soPhongThi, soGiamThi, soCaThi);
+                new FileTransferUtil().sendFiles(output, outputFiles);
+                log("[" + clientIp + "] Đã gửi 3 file kết quả cho client.");
             } catch (Exception e) {
                 log("[" + clientIp + "] Lỗi xử lý client: " + e.getMessage());
                 if (output != null) {
@@ -160,8 +162,15 @@ public class ExamServer {
                     }
                 }
             } finally {
-                if (outputFile != null && outputFile.exists() && !outputFile.delete()) {
-                    log("[" + clientIp + "] Không thể xóa file tạm: " + outputFile.getPath());
+                if (outputFiles != null) {
+                    for (File file : outputFiles) {
+                        if (file.exists() && !file.delete()) {
+                            log("[" + clientIp + "] Không thể xóa file tạm: " + file.getPath());
+                        }
+                    }
+                }
+                if (outputDirectory != null && outputDirectory.exists() && !outputDirectory.delete()) {
+                    log("[" + clientIp + "] Không thể xóa thư mục tạm: " + outputDirectory.getPath());
                 }
                 try { if (input != null) input.close(); } catch (Exception ignored) { }
                 try { if (output != null) output.close(); } catch (Exception ignored) { }
@@ -170,14 +179,16 @@ public class ExamServer {
             }
         }
 
-        private File createOutputFile(String clientIp) {
+        private File createOutputDirectory(String clientIp) {
             File outputDir = new File(SERVER_OUTPUT_DIR);
             if (!outputDir.exists()) {
                 outputDir.mkdirs();
             }
             String safeClientIp = clientIp.replaceAll("[^0-9A-Za-z._-]", "_");
-            return new File(outputDir, "server_ket_qua_phan_cong_" + safeClientIp + "_"
-                    + UUID.randomUUID().toString() + ".xlsx");
+            File clientOutputDir = new File(outputDir, "server_ket_qua_" + safeClientIp + "_"
+                    + UUID.randomUUID().toString());
+            clientOutputDir.mkdirs();
+            return clientOutputDir;
         }
     }
 }

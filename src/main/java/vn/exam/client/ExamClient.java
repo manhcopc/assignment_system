@@ -1,12 +1,14 @@
 package vn.exam.client;
 
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.DataOutputStream;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Scanner;
 
 import vn.exam.util.AppLogger;
@@ -15,8 +17,6 @@ import vn.exam.util.FileTransferUtil;
 public class ExamClient {
     private static final int SERVER_PORT = 9999;
     private static final int CONNECT_TIMEOUT_MILLIS = 10000;
-    private static final String CLIENT_OUTPUT_FILE = "output/ket_qua_phan_cong.xlsx";
-
     private final AppLogger logger;
 
     public ExamClient() {
@@ -75,9 +75,12 @@ public class ExamClient {
             output.writeInt(soCaThi);
             output.flush();
 
-            log("Đang nhận file kết quả...");
-            new FileTransferUtil().receiveFile(input, outputPath);
-            log("Đã nhận và lưu file kết quả tại: " + outputPath);
+            log("Đang nhận 3 file kết quả...");
+            List<File> receivedFiles = new FileTransferUtil().receiveFiles(input, outputPath);
+            for (File file : receivedFiles) {
+                log("Đã nhận file: " + file.getPath());
+            }
+            log("Đã nhận đủ 3 file kết quả.");
         } catch (Exception e) {
             logConnectionError(e, port);
             throw e;
@@ -128,9 +131,9 @@ public class ExamClient {
     }
 
     private String readOutputPath(Scanner scanner) {
-        System.out.print("Nhập đường dẫn lưu file kết quả (bỏ trống để dùng output/ket_qua_phan_cong.xlsx): ");
+        System.out.print("Nhập thư mục lưu 3 file kết quả (bỏ trống để dùng output): ");
         String value = scanner.nextLine().trim();
-        return value.length() == 0 ? CLIENT_OUTPUT_FILE : value;
+        return value.length() == 0 ? "output" : value;
     }
 
     private int readNonNegativeInt(Scanner scanner, String message, boolean mustBePositive) {

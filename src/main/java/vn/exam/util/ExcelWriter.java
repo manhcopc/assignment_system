@@ -3,6 +3,8 @@ package vn.exam.util;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -18,6 +20,44 @@ import vn.exam.model.PhanCong;
 import vn.exam.service.AssignmentService;
 
 public class ExcelWriter {
+
+    public List<File> writeAssignmentResultFiles(AssignmentResult result, String outputDirectoryPath,
+                                                 int soPhongThi, int soGiamThi, int soCaThi) throws IOException {
+        File outputDirectory = new File(outputDirectoryPath);
+        if (!outputDirectory.exists()) {
+            outputDirectory.mkdirs();
+        }
+        if (!outputDirectory.isDirectory()) {
+            throw new IOException("Đường dẫn output không phải thư mục: " + outputDirectoryPath);
+        }
+
+        List<File> files = new ArrayList<File>();
+        File phanCongFile = new File(outputDirectory, "DANHSACHPHANCONG.XLSX");
+        File giamSatFile = new File(outputDirectory, "DANH SACHGIAMSAT.XLSX");
+        File thongKeFile = new File(outputDirectory, "THONGKE.XLSX");
+
+        writeSingleSheetWorkbook(phanCongFile, new SheetWriter() {
+            public void write(Workbook workbook, CellStyle headerStyle) {
+                writePhanCongSheet(workbook, result, headerStyle);
+            }
+        });
+        writeSingleSheetWorkbook(giamSatFile, new SheetWriter() {
+            public void write(Workbook workbook, CellStyle headerStyle) {
+                writeGiamSatSheet(workbook, result, headerStyle);
+            }
+        });
+        writeSingleSheetWorkbook(thongKeFile, new SheetWriter() {
+            public void write(Workbook workbook, CellStyle headerStyle) {
+                writeThongKeSheet(workbook, result, headerStyle, soPhongThi, soGiamThi, soCaThi);
+            }
+        });
+
+        files.add(phanCongFile);
+        files.add(giamSatFile);
+        files.add(thongKeFile);
+        return files;
+    }
+
     public void writeAssignmentResult(AssignmentResult result, String outputPath,
                                       int soPhongThi, int soGiamThi, int soCaThi) throws IOException {
         File outputFile = new File(outputPath);
@@ -101,6 +141,31 @@ public class ExcelWriter {
         rowIndex = addStatistic(sheet, rowIndex, "Tổng số dòng phân công giám thị", result.getDanhSachPhanCong().size());
         addStatistic(sheet, rowIndex, "Tổng số dòng giám sát", result.getDanhSachGiamSat().size());
         autoSize(sheet, 2);
+    }
+
+
+    private void writeSingleSheetWorkbook(File outputFile, SheetWriter sheetWriter) throws IOException {
+        File parent = outputFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        Workbook workbook = new XSSFWorkbook();
+        try {
+            CellStyle headerStyle = createHeaderStyle(workbook);
+            sheetWriter.write(workbook, headerStyle);
+            FileOutputStream outputStream = new FileOutputStream(outputFile);
+            try {
+                workbook.write(outputStream);
+            } finally {
+                outputStream.close();
+            }
+        } finally {
+            workbook.close();
+        }
+    }
+
+    private interface SheetWriter {
+        void write(Workbook workbook, CellStyle headerStyle);
     }
 
     private int tinhSoCaThi(AssignmentResult result) {
