@@ -22,7 +22,7 @@ import vn.exam.service.AssignmentService;
 public class ExcelWriter {
 
     public List<File> writeAssignmentResultFiles(AssignmentResult result, String outputDirectoryPath,
-                                                 int soPhongThi, int soGiamThi, int soCaThi) throws IOException {
+            int soPhongThi, int soGiamThi, int soCaThi) throws IOException {
         File outputDirectory = new File(outputDirectoryPath);
         if (!outputDirectory.exists()) {
             outputDirectory.mkdirs();
@@ -59,7 +59,7 @@ public class ExcelWriter {
     }
 
     public void writeAssignmentResult(AssignmentResult result, String outputPath,
-                                      int soPhongThi, int soGiamThi, int soCaThi) throws IOException {
+            int soPhongThi, int soGiamThi, int soCaThi) throws IOException {
         File outputFile = new File(outputPath);
         File parent = outputFile.getParentFile();
         if (parent != null && !parent.exists()) {
@@ -95,8 +95,8 @@ public class ExcelWriter {
 
     private void writePhanCongSheet(Workbook workbook, AssignmentResult result, CellStyle headerStyle) {
         Sheet sheet = workbook.createSheet("Danh sách phân công");
-        createHeader(sheet, headerStyle, new String[] {"Ca thi", "STT", "Mã GV", "Họ và tên",
-                "Giám thị 1", "Giám thị 2", "Phòng thi"});
+        createHeader(sheet, headerStyle, new String[] { "Ca thi", "STT", "Mã GV", "Họ và tên",
+                "Giám thị 1", "Giám thị 2", "Phòng thi" });
         int rowIndex = 1;
         for (PhanCong phanCong : result.getDanhSachPhanCong()) {
             Row row = sheet.createRow(rowIndex++);
@@ -113,7 +113,8 @@ public class ExcelWriter {
 
     private void writeGiamSatSheet(Workbook workbook, AssignmentResult result, CellStyle headerStyle) {
         Sheet sheet = workbook.createSheet("Danh sách giám sát");
-        createHeader(sheet, headerStyle, new String[] {"Ca thi", "STT", "Mã GV", "Họ và tên", "Phòng thi được giám sát"});
+        createHeader(sheet, headerStyle,
+                new String[] { "Ca thi", "STT", "Mã GV", "Họ và tên", "Phòng thi được giám sát" });
         int rowIndex = 1;
         for (GiamSat giamSat : result.getDanhSachGiamSat()) {
             Row row = sheet.createRow(rowIndex++);
@@ -127,22 +128,22 @@ public class ExcelWriter {
     }
 
     private void writeThongKeSheet(Workbook workbook, AssignmentResult result, CellStyle headerStyle,
-                                   int soPhongThi, int soGiamThi, int soCaThi) {
+            int soPhongThi, int soGiamThi, int soCaThi) {
         int soGiamThiCan = soPhongThi * 2;
         int soCanBoGiamSat = soGiamThi - soGiamThiCan;
         Sheet sheet = workbook.createSheet("Thống kê");
-        createHeader(sheet, headerStyle, new String[] {"Nội dung", "Giá trị"});
+        createHeader(sheet, headerStyle, new String[] { "Nội dung", "Giá trị" });
         int rowIndex = 1;
         rowIndex = addStatistic(sheet, rowIndex, "Số phòng thi sử dụng", soPhongThi);
         rowIndex = addStatistic(sheet, rowIndex, "Số giám thị nhập vào", soGiamThi);
         rowIndex = addStatistic(sheet, rowIndex, "Số giám thị cần mỗi ca", soGiamThiCan);
         rowIndex = addStatistic(sheet, rowIndex, "Số cán bộ giám sát mỗi ca", soCanBoGiamSat);
         rowIndex = addStatistic(sheet, rowIndex, "Số ca thi", soCaThi);
-        rowIndex = addStatistic(sheet, rowIndex, "Tổng số dòng phân công giám thị", result.getDanhSachPhanCong().size());
+        rowIndex = addStatistic(sheet, rowIndex, "Tổng số dòng phân công giám thị",
+                result.getDanhSachPhanCong().size());
         addStatistic(sheet, rowIndex, "Tổng số dòng giám sát", result.getDanhSachGiamSat().size());
         autoSize(sheet, 2);
     }
-
 
     private void writeSingleSheetWorkbook(File outputFile, SheetWriter sheetWriter) throws IOException {
         File parent = outputFile.getParentFile();

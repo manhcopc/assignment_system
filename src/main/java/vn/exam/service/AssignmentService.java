@@ -13,142 +13,65 @@ import vn.exam.model.GiamSat;
 import vn.exam.model.PhanCong;
 import vn.exam.model.PhongThi;
 
+/**
+ * Dịch vụ phân công cán bộ coi thi
+ * 
+ * Tích hợp thuật toán Backtracking với Retry:
+ * - Sử dụng BacktrackingAssignmentEngine để phân công
+ * - Nếu không tìm được phương án, tự động retry với trạng thái mới
+ * - Đảm bảo các ràng buộc: không coi lại phòng, không ghép lại cặp, không giám sát lại phòng
+ */
 public class AssignmentService {
     public static final String VAI_TRO_GIAM_THI_1 = "Giám thị 1";
     public static final String VAI_TRO_GIAM_THI_2 = "Giám thị 2";
 
-    private Map<String, Set<String>> phongDaCoi;
-    private Set<String> capDaGhep;
+    private int maxRetry = 100;
 
+    /**
+     * Constructor mặc định
+     */
+    public AssignmentService() {
+    }
+
+    /**
+     * Constructor cho phép tuỳ chỉnh số lần retry tối đa
+     */
+    public AssignmentService(int maxRetry) {
+        this.maxRetry = maxRetry > 0 ? maxRetry : 100;
+    }
+
+    /**
+     * Phân công nhiều ca thi sử dụng thuật toán Backtracking + Retry
+     * @param danhSachCanBo - danh sách toàn bộ cán bộ
+     * @param danhSachPhong - danh sách toàn bộ phòng thi
+     * @param soPhongThi - số phòng thi cần sử dụng
+     * @param soGiamThi - số giám thị cần sử dụng
+     * @param soCaThi - số ca thi
+     * @return kết quả phân công
+     */
     public AssignmentResult phanCongNhieuCa(List<CanBo> danhSachCanBo, List<PhongThi> danhSachPhong,
                                             int soPhongThi, int soGiamThi, int soCaThi) {
         validateInput(danhSachCanBo, danhSachPhong, soPhongThi, soGiamThi, soCaThi);
 
-        phongDaCoi = new HashMap<String, Set<String>>();
-        capDaGhep = new HashSet<String>();
-        List<PhongThi> phongDuocDung = new ArrayList<PhongThi>(danhSachPhong.subList(0, soPhongThi));
-        List<CanBo> canBoDuocDung = new ArrayList<CanBo>(danhSachCanBo.subList(0, soGiamThi));
-        int soGiamThiCan = soPhongThi * 2;
-        int soCanBoGiamSat = soGiamThi - soGiamThiCan;
-        List<PhanCong> danhSachPhanCong = new ArrayList<PhanCong>();
-        List<GiamSat> danhSachGiamSat = new ArrayList<GiamSat>();
+        // Sử dụng BacktrackingAssignmentEngine với cơ chế retry
+        BacktrackingAssignmentEngine engine = new BacktrackingAssignmentEngine(maxRetry);
+        BacktrackingAssignmentEngine.PhanCongResult result = engine.phanCongNhieuCa(
+                danhSachCanBo, danhSachPhong, soPhongThi, soGiamThi, soCaThi);
 
-        for (int caThi = 1; caThi <= soCaThi; caThi++) {
-            List<RoomAssignment> phanCongCa = new ArrayList<RoomAssignment>();
-            Set<String> canBoDaDungTrongCa = new HashSet<String>();
-
-            if (!chonGiamThiChoCa(canBoDuocDung, phongDuocDung, 0, canBoDaDungTrongCa, phanCongCa)) {
-                throw new IllegalArgumentException("Không thể phân công giám thị cho ca " + caThi
-                        + " mà vẫn thỏa mãn các ràng buộc phòng đã coi và cặp đã ghép.");
-            }
-
-            int sttPhanCong = 1;
-            for (RoomAssignment assignment : phanCongCa) {
-                danhSachPhanCong.add(new PhanCong(caThi, sttPhanCong++, assignment.giamThi1,
-                        assignment.phongThi, VAI_TRO_GIAM_THI_1));
-                danhSachPhanCong.add(new PhanCong(caThi, sttPhanCong++, assignment.giamThi2,
-                        assignment.phongThi, VAI_TRO_GIAM_THI_2));
-                ghiNhanPhongDaCoi(assignment.giamThi1, assignment.phongThi);
-                ghiNhanPhongDaCoi(assignment.giamThi2, assignment.phongThi);
-                capDaGhep.add(taoKhoaCap(assignment.giamThi1, assignment.giamThi2));
-            }
-
-            int sttGiamSat = 1;
-            for (CanBo canBo : canBoDuocDung) {
-                if (sttGiamSat > soCanBoGiamSat) {
-                    break;
-                }
-                if (!canBoDaDungTrongCa.contains(canBo.getMaGv())) {
-                    PhongThi phongGiamSat = phongDuocDung.get((sttGiamSat - 1) % soPhongThi);
-                    danhSachGiamSat.add(new GiamSat(caThi, sttGiamSat, canBo, phongGiamSat));
-                    canBoDaDungTrongCa.add(canBo.getMaGv());
-                    sttGiamSat++;
-                }
-            }
-
-            if (sttGiamSat <= soCanBoGiamSat) {
-                throw new IllegalArgumentException("Không đủ cán bộ chưa dùng trong ca " + caThi
-                        + " để phân công " + soCanBoGiamSat + " cán bộ giám sát.");
-            }
-        }
-
-        return new AssignmentResult(danhSachPhanCong, danhSachGiamSat);
+        return new AssignmentResult(result.danhSachPhanCong, result.danhSachGiamSat);
     }
 
+    /**
+     * Phân công 1 ca thi (wrapper cho compatibility)
+     */
     public AssignmentResult assign(List<CanBo> canBoList, List<PhongThi> phongThiList,
                                    int soPhongThi, int soGiamThi) {
         return phanCongNhieuCa(canBoList, phongThiList, soPhongThi, soGiamThi, 1);
     }
 
-    private boolean chonGiamThiChoCa(List<CanBo> danhSachCanBo, List<PhongThi> phongDuocDung,
-                                     int phongIndex, Set<String> canBoDaDungTrongCa,
-                                     List<RoomAssignment> phanCongCa) {
-        if (phongIndex == phongDuocDung.size()) {
-            return true;
-        }
-
-        PhongThi phongThi = phongDuocDung.get(phongIndex);
-        for (int i = 0; i < danhSachCanBo.size(); i++) {
-            CanBo giamThi1 = danhSachCanBo.get(i);
-            if (!coTheCoiPhong(giamThi1, phongThi, canBoDaDungTrongCa)) {
-                continue;
-            }
-            canBoDaDungTrongCa.add(giamThi1.getMaGv());
-
-            for (int j = 0; j < danhSachCanBo.size(); j++) {
-                if (i == j) {
-                    continue;
-                }
-                CanBo giamThi2 = danhSachCanBo.get(j);
-                if (!coTheCoiPhong(giamThi2, phongThi, canBoDaDungTrongCa)) {
-                    continue;
-                }
-                if (capDaGhep.contains(taoKhoaCap(giamThi1, giamThi2))) {
-                    continue;
-                }
-
-                canBoDaDungTrongCa.add(giamThi2.getMaGv());
-                phanCongCa.add(new RoomAssignment(phongThi, giamThi1, giamThi2));
-                if (chonGiamThiChoCa(danhSachCanBo, phongDuocDung, phongIndex + 1,
-                        canBoDaDungTrongCa, phanCongCa)) {
-                    return true;
-                }
-                phanCongCa.remove(phanCongCa.size() - 1);
-                canBoDaDungTrongCa.remove(giamThi2.getMaGv());
-            }
-
-            canBoDaDungTrongCa.remove(giamThi1.getMaGv());
-        }
-        return false;
-    }
-
-    private boolean coTheCoiPhong(CanBo canBo, PhongThi phongThi, Set<String> canBoDaDungTrongCa) {
-        String maGv = canBo.getMaGv();
-        if (canBoDaDungTrongCa.contains(maGv)) {
-            return false;
-        }
-        Set<String> danhSachPhongDaCoi = phongDaCoi.get(maGv);
-        return danhSachPhongDaCoi == null || !danhSachPhongDaCoi.contains(phongThi.getTenPhong());
-    }
-
-    private void ghiNhanPhongDaCoi(CanBo canBo, PhongThi phongThi) {
-        Set<String> danhSachPhong = phongDaCoi.get(canBo.getMaGv());
-        if (danhSachPhong == null) {
-            danhSachPhong = new HashSet<String>();
-            phongDaCoi.put(canBo.getMaGv(), danhSachPhong);
-        }
-        danhSachPhong.add(phongThi.getTenPhong());
-    }
-
-    private String taoKhoaCap(CanBo canBo1, CanBo canBo2) {
-        String ma1 = canBo1.getMaGv();
-        String ma2 = canBo2.getMaGv();
-        if (ma1.compareTo(ma2) <= 0) {
-            return ma1 + "|" + ma2;
-        }
-        return ma2 + "|" + ma1;
-    }
-
+    /**
+     * Kiểm tra tính hợp lệ của dữ liệu đầu vào
+     */
     private void validateInput(List<CanBo> canBoList, List<PhongThi> phongThiList,
                                int soPhongThi, int soGiamThi, int soCaThi) {
         if (soPhongThi <= 0) {
@@ -178,18 +101,6 @@ public class AssignmentService {
         if (soGiamThi < soGiamThiCan) {
             throw new IllegalArgumentException("Số giám thị nhập vào phải >= số phòng thi * 2. Cần ít nhất "
                     + soGiamThiCan + " giám thị nhưng chỉ nhập " + soGiamThi + ".");
-        }
-    }
-
-    private static class RoomAssignment {
-        private PhongThi phongThi;
-        private CanBo giamThi1;
-        private CanBo giamThi2;
-
-        private RoomAssignment(PhongThi phongThi, CanBo giamThi1, CanBo giamThi2) {
-            this.phongThi = phongThi;
-            this.giamThi1 = giamThi1;
-            this.giamThi2 = giamThi2;
         }
     }
 }

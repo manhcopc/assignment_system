@@ -13,11 +13,11 @@ import java.util.UUID;
 import vn.exam.model.AssignmentResult;
 import vn.exam.model.CanBo;
 import vn.exam.model.PhongThi;
-import vn.exam.service.AssignmentService;
+import vn.exam.service.BacktrackingAssignmentEngine;
 import vn.exam.util.AppLogger;
 import vn.exam.util.ExcelReader;
-import vn.exam.util.ExcelWriter;
 import vn.exam.util.FileTransferUtil;
+import vn.exam.util.ReportGenerator;
 
 public class ExamServer {
     public static final int PORT = 9999;
@@ -29,6 +29,7 @@ public class ExamServer {
     private final AppLogger logger;
     private volatile boolean running;
     private ServerSocket serverSocket;
+    private volatile int caThi = 1;
 
     public ExamServer() {
         this(new AppLogger() {
@@ -115,12 +116,13 @@ public class ExamServer {
     }
 
     private class ClientHandler implements Runnable {
-        private Socket socket;
+        private final Socket socket;
 
         private ClientHandler(Socket socket) {
             this.socket = socket;
         }
 
+        @Override
         public void run() {
             handleClient(socket);
         }
@@ -137,28 +139,56 @@ public class ExamServer {
 
                 int soPhongThi = input.readInt();
                 int soGiamThi = input.readInt();
-                int soCaThi = input.readInt();
+                input.readInt();  // Đọc soCaThi từ client nhưng không dùng (server LUÔN phân công 1 CA/request)
+                
                 log("[" + clientIp + "] Yêu cầu: " + soPhongThi + " phòng thi, "
-                        + soGiamThi + " giám thị, " + soCaThi + " ca thi.");
+                        + soGiamThi + " giám thị");
 
                 ExcelReader reader = new ExcelReader();
                 List<CanBo> canBoList = reader.readCanBo(CAN_BO_FILE);
                 List<PhongThi> phongThiList = reader.readPhongThi(PHONG_THI_FILE);
 
-                AssignmentResult result = new AssignmentService().phanCongNhieuCa(canBoList, phongThiList,
-                        soPhongThi, soGiamThi, soCaThi);
+                // Theo báo cáo v1.0: LUÔN phân công 1 CA duy nhất mỗi request
+                BacktrackingAssignmentEngine engine = new BacktrackingAssignmentEngine();
+                BacktrackingAssignmentEngine.PhanCongResult phanCongResult = engine.phanCongNhieuCa(
+                        canBoList, phongThiList, 
+                        soPhongThi, soGiamThi, 
+                        1);  // Luôn 1 CA
+
+                AssignmentResult result = new AssignmentResult(
+                        phanCongResult.danhSachPhanCong,
+                        phanCongResult.danhSachGiamSat);
+
                 outputDirectory = createOutputDirectory(clientIp);
-                outputFiles = new ExcelWriter().writeAssignmentResultFiles(result, outputDirectory.getPath(),
-                        soPhongThi, soGiamThi, soCaThi);
+                ReportGenerator reportGenerator = new ReportGenerator();
+                
+                // Lấy ca thi hiện tại và tự động tăng
+                int currentCaThi;
+                synchronized (ExamServer.this) {
+                    currentCaThi = caThi;
+                    caThi++;
+                }
+                
+                outputFiles = reportGenerator.generateReports(result, outputDirectory.getPath(),
+                        soPhongThi, soGiamThi, 1, phanCongResult.retryCount, currentCaThi);
+
+                log("[" + clientIp + "] Thuật toán hoàn tất - Số lần retry: " + phanCongResult.retryCount);
+                log("[" + clientIp + "] Ca thi: " + currentCaThi);
+                log("[" + clientIp + "] Đã tạo " + outputFiles.size() + " file báo cáo:");
+                for (File file : outputFiles) {
+                    log("[" + clientIp + "]   - " + file.getName() + " (" + file.length() + " bytes)");
+                }
+
+                socket.setSoTimeout(60000);
                 new FileTransferUtil().sendFiles(output, outputFiles);
-                log("[" + clientIp + "] Đã gửi 3 file kết quả cho client.");
+                log("[" + clientIp + "] Đã gửi " + outputFiles.size() + " file kết quả cho client.");
             } catch (Exception e) {
                 log("[" + clientIp + "] Lỗi xử lý client: " + e.getMessage());
                 if (output != null) {
                     try {
                         new FileTransferUtil().sendError(output, e.getMessage());
-                    } catch (Exception sendErrorException) {
-                        log("[" + clientIp + "] Không thể gửi lỗi về client: " + sendErrorException.getMessage());
+                    } catch (Exception ex) {
+                        log("[" + clientIp + "] Không thể gửi lỗi về client: " + ex.getMessage());
                     }
                 }
             } finally {
@@ -172,9 +202,21 @@ public class ExamServer {
                 if (outputDirectory != null && outputDirectory.exists() && !outputDirectory.delete()) {
                     log("[" + clientIp + "] Không thể xóa thư mục tạm: " + outputDirectory.getPath());
                 }
-                try { if (input != null) input.close(); } catch (Exception ignored) { }
-                try { if (output != null) output.close(); } catch (Exception ignored) { }
-                try { socket.close(); } catch (Exception ignored) { }
+                try {
+                    if (input != null) input.close();
+                } catch (Exception ex) {
+                    log("[" + clientIp + "] Lỗi đóng input: " + ex.getMessage());
+                }
+                try {
+                    if (output != null) output.close();
+                } catch (Exception ex) {
+                    log("[" + clientIp + "] Lỗi đóng output: " + ex.getMessage());
+                }
+                try {
+                    socket.close();
+                } catch (Exception ex) {
+                    log("[" + clientIp + "] Lỗi đóng socket: " + ex.getMessage());
+                }
                 log("[" + clientIp + "] Đã đóng kết nối.");
             }
         }
